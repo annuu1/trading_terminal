@@ -9,35 +9,12 @@ class FinancialAnalyzer(ctk.CTk):
         self.title("Financial Analyzer")
         self.geometry("800x600")
 
-        # Dropdown for selecting the first indicator
-        self.indicator1_label = ctk.CTkLabel(self, text="Select First Indicator:")
-        self.indicator1_label.pack()
-        self.indicator1_dropdown = ctk.CTkComboBox(self, values=["SMA", "EMA", "RSI"])
-        self.indicator1_dropdown.pack()
+        # List to hold all condition blocks
+        self.condition_blocks = []
 
-        # Entry for the parameters of the first indicator
-        self.params1_label = ctk.CTkLabel(self, text="Enter Parameters for First Indicator:")
-        self.params1_label.pack()
-        self.params1_entry = ctk.CTkEntry(self)
-        self.params1_entry.pack()
-
-        # Dropdown for selecting the conditional operator
-        self.operator_label = ctk.CTkLabel(self, text="Select Conditional Operator:")
-        self.operator_label.pack()
-        self.operator_dropdown = ctk.CTkComboBox(self, values=[">", "<", "==", ">=", "<="])
-        self.operator_dropdown.pack()
-
-        # Dropdown for selecting the second indicator or value
-        self.indicator2_label = ctk.CTkLabel(self, text="Select Second Indicator or Enter Value:")
-        self.indicator2_label.pack()
-        self.indicator2_dropdown = ctk.CTkComboBox(self, values=["SMA", "EMA", "RSI", "Value"])
-        self.indicator2_dropdown.pack()
-
-        # Entry for the parameters of the second indicator or value
-        self.params2_label = ctk.CTkLabel(self, text="Enter Parameters for Second Indicator or Value:")
-        self.params2_label.pack()
-        self.params2_entry = ctk.CTkEntry(self)
-        self.params2_entry.pack()
+        # Button to add a new condition block
+        self.add_condition_button = ctk.CTkButton(self, text="Add Condition", command=self.add_condition_block)
+        self.add_condition_button.pack()
 
         # Button to perform the calculation
         self.calculate_button = ctk.CTkButton(self, text="Calculate", command=self.calculate)
@@ -47,30 +24,66 @@ class FinancialAnalyzer(ctk.CTk):
         self.result_label = ctk.CTkLabel(self, text="")
         self.result_label.pack()
 
+        # Initially add one condition block
+        self.add_condition_block()
+
+    def add_condition_block(self):
+        # Create a new frame for the condition block
+        condition_frame = ctk.CTkFrame(self)
+        condition_frame.pack(pady=10)
+
+        # Dropdown for selecting the first indicator
+        indicator1_dropdown = ctk.CTkComboBox(condition_frame, values=["SMA", "EMA", "RSI"])
+        indicator1_dropdown.pack(side='left')
+
+        # Entry for the parameters of the first indicator
+        params1_entry = ctk.CTkEntry(condition_frame)
+        params1_entry.pack(side='left')
+
+        # Dropdown for selecting the conditional operator
+        operator_dropdown = ctk.CTkComboBox(condition_frame, values=[">", "<", "==", ">=", "<="])
+        operator_dropdown.pack(side='left')
+
+        # Dropdown for selecting the second indicator or value
+        indicator2_dropdown = ctk.CTkComboBox(condition_frame, values=["SMA", "EMA", "RSI", "Value"])
+        indicator2_dropdown.pack(side='left')
+
+        # Entry for the parameters of the second indicator or value
+        params2_entry = ctk.CTkEntry(condition_frame)
+        params2_entry.pack(side='left')
+
+        # Add the condition block to the list
+        self.condition_blocks.append((indicator1_dropdown, params1_entry, operator_dropdown, indicator2_dropdown, params2_entry))
+
     def calculate(self):
+        # Placeholder for the overall result
+        overall_result = True
+
         # Fetch data from yfinance
         ticker = 'AAPL'  # Placeholder for the ticker symbol
         data = yf.download(ticker, period='1mo')
 
-        # Calculate the first indicator
-        indicator1 = self.indicator1_dropdown.get()
-        params1 = self.params1_entry.get()  # You will need to parse these parameters appropriately
-        indicator1_data = self.calculate_indicator(data, indicator1, params1)
+        # Iterate over each condition block and evaluate
+        for block in self.condition_blocks:
+            indicator1, params1, operator, indicator2, params2 = block
 
-        # Get the conditional operator
-        operator = self.operator_dropdown.get()
+            # Calculate the first indicator
+            indicator1_data = self.calculate_indicator(data, indicator1.get(), params1.get())
 
-        # Calculate the second indicator or get the value
-        indicator2 = self.indicator2_dropdown.get()
-        params2 = self.params2_entry.get()  # You will need to parse these parameters appropriately
-        if indicator2.lower() == "value":
-            indicator2_data = float(params2)  # Directly use the entered value
-        else:
-            indicator2_data = self.calculate_indicator(data, indicator2, params2)
+            # Calculate the second indicator or get the value
+            if indicator2.get().lower() == "value":
+                indicator2_data = float(params2.get())  # Directly use the entered value
+            else:
+                indicator2_data = self.calculate_indicator(data, indicator2.get(), params2.get())
 
-        # Evaluate the condition and display the result
-        result = self.evaluate_condition(indicator1_data, operator, indicator2_data)
-        self.result_label.configure(f"Result: {result}")
+            # Evaluate the condition for the current block
+            result = self.evaluate_condition(indicator1_data, operator.get(), indicator2_data)
+
+            # Combine the result with the overall result using logical AND
+            overall_result = overall_result and result
+
+        # Display the overall result
+        self.result_label.set_text(f"Overall Result: {overall_result}")
 
     def calculate_indicator(self, data, indicator, params):
         # Placeholder function to calculate indicators
@@ -80,7 +93,7 @@ class FinancialAnalyzer(ctk.CTk):
     def evaluate_condition(self, value1, operator, value2):
         # Placeholder function to evaluate the condition
         # You will need to implement the actual evaluation logic based on the operator
-        return "False"  # Placeholder return value
+        return False  # Placeholder return value
 
 if __name__ == '__main__':
     app = FinancialAnalyzer()
