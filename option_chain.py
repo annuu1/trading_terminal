@@ -121,38 +121,42 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
                     ctk.CTkLabel(self, text= value_ce).grid(row = call_row, column = j)
                     ce_formatting_data.append({'row_number': call_row, 'label_idx': j, 'value': value_ce})
 
-                ctk.CTkLabel(self, text= data[i].get('strikePrice')).grid(row = call_row, column = 5)
+                ctk.CTkLabel(self, text= data[i].get('strikePrice'), fg_color='#514203').grid(row = call_row, column = 5, sticky = 'nsew')
             
                 for j in range(len(labels)):
                     value_pe = round(PE_data.get(labels[len(labels)-1-j]),3)
                     ctk.CTkLabel(self, text= value_pe).grid(row = put_row, column = j+6)
                     pe_formatting_data.append({'row_number': call_row, 'label_idx': j+6, 'value': value_pe})
 
-        self.format_data(ce_formatting_data, colors = ['#FD0707', '#FE3D3D', '#FC7543'], column_idx=[0])
-        self.format_data(pe_formatting_data, colors = ['#017112', '#05A71D', '#02E023'], column_idx=[10])
+        self.format_data(ce_formatting_data, colors = ['#FD0707', '#FE3D3D', '#FC7543'], column_idx=[0,1])
+        self.format_data(pe_formatting_data, colors = ['#017112', '#05A71D', '#02E023'], column_idx=[9,10])
         self.display_sideframe_data()
 
     def format_data(self, data_list, colors, column_idx=[0, 1], top_n=3):
-            # Filter out the data for the specific column
-            column_data = [data for data in data_list if data['label_idx'] == column_idx[0]]
-            
-            # Sort the data by value in descending order
-            sorted_data = sorted(column_data, key=lambda x: x['value'], reverse=True)
-            
-            # Get the top N values and their row numbers
-            top_values = sorted_data[:top_n]
-            
-            # Apply color grading to the labels
-            for idx, data in enumerate(top_values):
-                value, row_number = data['value'], data['row_number']
-                color = colors[idx] if idx < len(colors) else 'grey'  # Default color for values beyond top N
-                label = ctk.CTkLabel(self, text=value, fg_color=color)
-                label.grid(row=row_number, column=column_idx[0], sticky = 'nsew')  # Update this line if labels are stored differently
-            
+            i = 0
+            for i in range(len(column_idx)):
+                # Filter out the data for the specific column
+                column_data = [data for data in data_list if data['label_idx'] == column_idx[i]]
+                
+                # Sort the data by value in descending order
+                sorted_data = sorted(column_data, key=lambda x: x['value'], reverse=True)
+                
+                # Get the top N values and their row numbers
+                top_values = sorted_data[:top_n]
+                
+                # Apply color grading to the labels
+                for idx, data in enumerate(top_values):
+                    value, row_number = data['value'], data['row_number']
+                    color = colors[idx] if idx < len(colors) else 'grey'  # Default color for values beyond top N
+                    label = ctk.CTkLabel(self, text=value, fg_color=color)
+                    label.grid(row=row_number, column=column_idx[i], sticky = 'nsew')  # Update this line if labels are stored differently
+                
     def display_sideframe_data(self):
         selected_symbol = self.controller.get_selected_symbol()
         quote_data = self.get_quotes(selected_symbol)
-        print(quote_data)
+        ltp = quote_data.get('last')
+        ctk.CTkLabel(self.menu_frame, text=selected_symbol).grid(row = 0, column = 0)
+        ctk.CTkLabel(self.menu_frame, text=ltp).grid(row = 1, column = 0)
 
     def get_quotes(self, symbol):
         indices_df = {"NIFTY": 'NIFTY 50', 'BANKNIFTY':"NIFTY BANK", 'FINNIFTY': 'NIFTY FIN SERVICE', 'MID CAP': "NIFTY MID SELECT"}
