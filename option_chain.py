@@ -33,9 +33,10 @@ class Header(ctk.CTkFrame):
         self.controller = controller
         self.grid(row=0, column=0, columnspan=5, sticky='nsew', pady=(2, 2))
 
-        self.indice = ctk.CTkComboBox(self, values=['Select Index', 'NIFTY', 'BANKNIFTY', 'FINNIFTY'])
+        self.indice = ctk.CTkComboBox(self, values=['Select Index', 'NIFTY', 'BANKNIFTY', 'FINNIFTY'],  command=self.update_expiries)
         self.indice.grid(row=0, column=0, padx=(2, 2), pady=(2, 2))
         self.indice.set(value="NIFTY")
+        # self.indice.bind("<FocusOut>", self.update_expiries)
 
         self.expiries = self.get_expiries()
         self.expiry = ctk.CTkComboBox(self, values=self.expiries)
@@ -50,6 +51,15 @@ class Header(ctk.CTkFrame):
         data = json.loads(Methods().get_data(url=url))['records']
         # print(data['expiryDates'])
         return data['expiryDates']
+    
+    def update_expiries(self, value):
+        # Fetch new expiries based on the selected indice
+        new_expiries = self.get_expiries()
+        # Update the values of the expiry CTkComboBox
+        self.expiry.configure(values = new_expiries)
+        # Set the first expiry as the selected value
+        self.expiry.set(value=new_expiries[0])
+
     def display_option_chain(self):
         self.controller.display_option_chain()
 
@@ -106,7 +116,7 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         put_row = 0
         atm_strike = 22100
         strikes_number = 10
-        atm_strike_index = None
+        atm_strike_index = 0
 
         #filter the data accroding to the expiry
         raw_data = json.loads(Methods().get_data(url=url))['records']['data'] #list of the chain data
@@ -197,6 +207,7 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         url_indices = "https://www.nseindia.com/api/allIndices"
         indices_data = json.loads(Methods().get_data(url=url_indices)) #indices data
         for data in indices_data['data']:
+            print(data)
             if data['indexSymbol'] ==indices_df[symbol]:
                 return data
         return f'Error! No indice with name {symbol}'
