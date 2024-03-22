@@ -105,7 +105,7 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         call_row = 0
         put_row = 0
         atm_strike = 22100
-        strikes_number = 20
+        strikes_number = 10
         atm_strike_index = None
 
         #filter the data accroding to the expiry
@@ -137,8 +137,10 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
                     value_ce = round(CE_data.get(labels[j]),3)
                     ctk.CTkLabel(self, text= value_ce).grid(row = call_row, column = j)
                     ce_formatting_data.append({'row_number': call_row, 'label_idx': j, 'value': value_ce})
-
-                ctk.CTkLabel(self, text= data[i].get('strikePrice'), fg_color='#514203').grid(row = call_row, column = 5, sticky = 'nsew')
+                if data[i].get('strikePrice') != atm_strike:
+                    ctk.CTkLabel(self, text= data[i].get('strikePrice'), fg_color='#514203').grid(row = call_row, column = 5, sticky = 'nsew')
+                else:
+                    ctk.CTkLabel(self, text= data[i].get('strikePrice'), fg_color='blue').grid(row = call_row, column = 5, sticky = 'nsew')
             
                 for j in range(len(labels)):
                     value_pe = round(PE_data.get(labels[len(labels)-1-j]),3)
@@ -148,6 +150,21 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         self.format_data(ce_formatting_data, colors = ['#FD0707', '#FE3D3D', '#FC7543'], column_idx=[0,1])
         self.format_data(pe_formatting_data, colors = ['#017112', '#05A71D', '#02E023'], column_idx=[9,10])
         self.display_sideframe_data()
+        self.calculate_pcr(data)
+
+    def calculate_pcr(self, data, column = "openInterest"):
+        call_oi = 0
+        put_oi = 0
+        pcr = 0
+
+        for i in range(len(data)):
+            call_oi += data[i].get("CE").get(column)
+            put_oi += data[i].get("PE").get(column)
+        # print(f'call OI {call_oi}, put OI {put_oi}')    
+        # print(f'PCR {put_oi/call_oi}') 
+        pcr= round(put_oi/call_oi, 3)   
+        ctk.CTkLabel(self.menu_frame, text="All Strikes PCR").grid(row= 2, column = 0, sticky = "nsew")
+        ctk.CTkLabel(self.menu_frame, text=pcr).grid(row= 3, column = 0, sticky = "nsew")
 
     def format_data(self, data_list, colors, column_idx=[0, 1], top_n=3):
             i = 0
