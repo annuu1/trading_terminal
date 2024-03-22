@@ -1,6 +1,7 @@
 import json
 import customtkinter as ctk
 import requests
+import math
 
 # Controller class to manage dependencies and frame instances
 class ApplicationController:
@@ -33,7 +34,7 @@ class Header(ctk.CTkFrame):
         self.controller = controller
         self.grid(row=0, column=0, columnspan=5, sticky='nsew', pady=(2, 2))
 
-        self.indice = ctk.CTkComboBox(self, values=['Select Index', 'NIFTY', 'BANKNIFTY', 'FINNIFTY'],  command=self.update_expiries)
+        self.indice = ctk.CTkComboBox(self, values=['SELECT INDEX', 'NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'],  command=self.update_expiries)
         self.indice.grid(row=0, column=0, padx=(2, 2), pady=(2, 2))
         self.indice.set(value="NIFTY")
         # self.indice.bind("<FocusOut>", self.update_expiries)
@@ -114,7 +115,7 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         pe_formatting_data = []
         call_row = 0
         put_row = 0
-        atm_strike = 22100
+        atm_strike = self.calculate_atm_strik(symbol)
         strikes_number = 10
         atm_strike_index = 0
 
@@ -162,6 +163,17 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         self.display_sideframe_data()
         self.calculate_pcr(data)
 
+    
+    def calculate_atm_strik(self, symbol):
+        strikes = {'BANKNIFTY' : 100, 'NIFTY' :50, 'FINNIFTY': 50, 'MIDCPNIFTY' : 25}
+        strik_def =strikes[symbol]
+
+        last_price = self.get_quotes(symbol=symbol).get('last')
+        val1 = math.floor(last_price / strik_def) * strik_def
+        print(math.floor(last_price / strik_def))
+        val2 = math.ceil(last_price / strik_def) * strik_def
+        return val1 if abs(last_price - val1) < abs(last_price - val2) else val2
+
     def calculate_pcr(self, data, column = "openInterest"):
         call_oi = 0
         put_oi = 0
@@ -203,7 +215,7 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         ctk.CTkLabel(self.menu_frame, text=ltp).grid(row = 1, column = 0)
 
     def get_quotes(self, symbol):
-        indices_df = {"NIFTY": 'NIFTY 50', 'BANKNIFTY':"NIFTY BANK", 'FINNIFTY': 'NIFTY FIN SERVICE', 'MID CAP': "NIFTY MID SELECT"}
+        indices_df = {"NIFTY": 'NIFTY 50', 'BANKNIFTY':"NIFTY BANK", 'FINNIFTY': 'NIFTY FIN SERVICE', 'MIDCPNIFTY': "NIFTY MID SELECT"}
         url_indices = "https://www.nseindia.com/api/allIndices"
         indices_data = json.loads(Methods().get_data(url=url_indices)) #indices data
         for data in indices_data['data']:
