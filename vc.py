@@ -14,6 +14,7 @@ class OptionChainWindow(ctk.CTk):
         self.rowconfigure((0, 1,2,3,4), weight=1)
 
         header = Header(self)
+        # menu = MenuFrame(self)
         # methods = methods()
 
 class Header(ctk.CTkFrame):
@@ -44,11 +45,25 @@ class Header(ctk.CTkFrame):
         option_chain_frame = OptionChainFrame(master=self.master)
         option_chain_frame.display_chain(self.indice.get(), self.expiry.get())
 
+class MenuFrame(ctk.CTkScrollableFrame):
+    def __init__(self, master):
+        super().__init__(master)
+        # Set the width and height for the frame
+        self.width = 30        
+        # Configure the frame's width and height
+        self.configure(width=self.width)
+
+        self.grid(row = 1, column = 0, sticky = 'nsew',padx = (0, 1) , pady = (1,1))
+
+        ctk.CTkLabel(self, text="help").grid(row = 0, column = 0)
+        
+
 class OptionChainFrame(ctk.CTkScrollableFrame):
     def __init__(self, master):
         super().__init__(master)
+        self.menu_frame =MenuFrame(master=master)
 
-        self.grid(row = 1, column = 0, columnspan = 5, sticky = 'nsew', pady = (2,2))
+        self.grid(row = 1, column = 1, columnspan = 5, sticky = 'nsew', pady = (1,2))
         self.columnconfigure((0,1,2,3,4,5,6,7,8,9,10), weight=1)
 
         ctk.CTkLabel(self, text="Option Chain").grid(row = 0, column = 0, sticky = 'nsew')
@@ -74,6 +89,7 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
 
     def display_chain(self, symbol, expiry):
         url = f'https://www.nseindia.com/api/option-chain-indices?symbol={symbol}'
+
         labels = ['openInterest', 'changeinOpenInterest', 'impliedVolatility', 'lastPrice', 'change']
         ce_formatting_data = []
         pe_formatting_data = []
@@ -103,13 +119,26 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
 
         self.format_data(ce_formatting_data, colors = ['#FD0707', '#FE3D3D', '#FC7543'], column_idx=[0])
         self.format_data(pe_formatting_data, colors = ['#017112', '#05A71D', '#02E023'], column_idx=[10])
-        
+        self.display_sideframe_data()
+
+    def display_sideframe_data(self):
+        ctk.CTkLabel(self.menu_frame, text='LTP').grid(row = 0, column = 0, sticky = 'nsew')
+        quote_data = self.get_quotes()
+        print(quote_data)
+
+    def get_quotes(self, symbol):
+        indices_df = {"NIFTY": 'NIFTY 50', 'BANKNIFTY':"NIFTY BANK", 'FINNIFTY': 'NIFTY FIN SERVICE', 'MID CAP': "NIFTY MID SELECT"}
+        url_indices = "https://www.nseindia.com/api/allIndices"
+        indices_data = json.loads(Methods().get_data(url=url_indices)) #indices data
+        for data in indices_data['data']:
+            if data['indexSymbol'] ==indices_df[symbol]:
+                return data
+        return f'Error! No indice with name {symbol}'
 
     def format_data(self, data_list, colors, column_idx=[0, 1], top_n=3):
         # Filter out the data for the specific column
         column_data = [data for data in data_list if data['label_idx'] == column_idx[0]]
-        print(column_idx[0])
-
+        
         # Sort the data by value in descending order
         sorted_data = sorted(column_data, key=lambda x: x['value'], reverse=True)
         
