@@ -1,49 +1,59 @@
 import json
-from typing import Tuple
-import requests
-from bs4 import BeautifulSoup
 import customtkinter as ctk
+import requests
 
-class OptionChainWindow(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        
-        self.title("Option Chain")
-        self.geometry("800x300")
-        self.columnconfigure((0, 1,2,3,4), weight=1)
-        self.rowconfigure((0, 1,2,3,4), weight=1)
+# Controller class to manage dependencies and frame instances
+class ApplicationController:
+    def __init__(self, root):
+        self.root = root
+        self.frames = {}
+        self.create_header()
 
-        header = Header(self)
-        # menu = MenuFrame(self)
-        # methods = methods()
+    def create_header(self):
+        if 'header' not in self.frames:
+            self.frames['header'] = Header(self, self.root)
+        return self.frames['header']
 
+    def create_option_chain_frame(self):
+        # Always create a new instance of OptionChainFrame
+        self.frames['option_chain_frame'] = OptionChainFrame(self, self.root)
+        return self.frames['option_chain_frame']
+
+    def get_selected_symbol(self):
+        return self.frames['header'].indice.get()
+
+    def display_option_chain(self):
+        option_chain_frame = self.create_option_chain_frame()
+        option_chain_frame.display_chain(self.get_selected_symbol(), self.frames['header'].expiry.get())
+
+# Header frame class
 class Header(ctk.CTkFrame):
-    def __init__(self, master):
+    def __init__(self, controller, master):
         super().__init__(master)
-        self.master = master
-        self.grid(row = 0, column = 0, columnspan = 5, sticky = 'nsew' , pady = (2,2))
+        self.controller = controller
+        self.grid(row=0, column=0, columnspan=5, sticky='nsew', pady=(2, 2))
 
-        self.indice = ctk.CTkComboBox(self, values=['Select Index' ,'NIFTY', 'BANKNIFTY', 'FINNIFTY'])
-        self.indice.grid(row = 0, column = 0, padx = (2,2), pady = (2, 2))
+        self.indice = ctk.CTkComboBox(self, values=['Select Index', 'NIFTY', 'BANKNIFTY', 'FINNIFTY'])
+        self.indice.grid(row=0, column=0, padx=(2, 2), pady=(2, 2))
         self.indice.set(value="NIFTY")
 
         self.expiries = self.get_expiries()
-        self.expiry = ctk.CTkComboBox(self, values=self.get_expiries())
-        self.expiry.grid(row = 0, column = 1, padx = (2,2), pady = (2, 2))
+        self.expiry = ctk.CTkComboBox(self, values=self.expiries)
+        self.expiry.grid(row=0, column=1, padx=(2, 2), pady=(2, 2))
         self.expiry.set(value=self.expiries[0])
 
-        self.option_chain_button = ctk.CTkButton(self, text="Show Option Chain", command= self.display_option_chain)
-        self.option_chain_button.grid(row = 0, column = 2, padx = (2,2), pady = (2, 2))
+        self.option_chain_button = ctk.CTkButton(self, text="Show Option Chain", command=self.display_option_chain)
+        self.option_chain_button.grid(row=0, column=2, padx=(2, 2), pady=(2, 2))
 
     def get_expiries(self):
         url = f'https://www.nseindia.com/api/option-chain-indices?symbol={self.indice.get()}'
         data = json.loads(Methods().get_data(url=url))['records']
         # print(data['expiryDates'])
         return data['expiryDates']
-    
     def display_option_chain(self):
-        option_chain_frame = OptionChainFrame(master=self.master)
-        option_chain_frame.display_chain(self.indice.get(), self.expiry.get())
+        self.controller.display_option_chain()
+
+
 
 class MenuFrame(ctk.CTkScrollableFrame):
     def __init__(self, master):
@@ -56,19 +66,19 @@ class MenuFrame(ctk.CTkScrollableFrame):
         self.grid(row = 1, column = 0, sticky = 'nsew',padx = (0, 1) , pady = (1,1))
 
         ctk.CTkLabel(self, text="help").grid(row = 0, column = 0)
-        
 
 class OptionChainFrame(ctk.CTkScrollableFrame):
-    def __init__(self, master):
+    def __init__(self, controller, master):
         super().__init__(master)
-        self.menu_frame =MenuFrame(master=master)
+        self.controller = controller
+        self.menu_frame = MenuFrame(master=master)
 
-        self.grid(row = 1, column = 1, columnspan = 5, sticky = 'nsew', pady = (1,2))
-        self.columnconfigure((0,1,2,3,4,5,6,7,8,9,10), weight=1)
+        self.grid(row=1, column=1, columnspan=5, sticky='nsew', pady=(1, 2))
+        self.columnconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10), weight=1)
 
-        ctk.CTkLabel(self, text="Option Chain").grid(row = 0, column = 0, sticky = 'nsew')
+        ctk.CTkLabel(self, text="Option Chain").grid(row=0, column=0, sticky='nsew')
         self.add_headers()
-        
+
     def add_headers(self):
         # Define the headers list with the 'STRIKE' column in the middle
         headers_list = ['OI', 'CHNG IN OI', 'IV', 'LTP', 'CHNG', 'STRIKE', 'CHNG', 'LTP', 'IV', 'CHNG IN OI', 'OI']
@@ -86,6 +96,7 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         # Create labels for headers after the 'STRIKE' column
         for idx in range(middle_index + 1, len(headers_list)):
             ctk.CTkLabel(self, text=headers_list[idx], fg_color="Red").grid(row=0, column=idx, sticky = 'nsew')
+
 
     def display_chain(self, symbol, expiry):
         url = f'https://www.nseindia.com/api/option-chain-indices?symbol={symbol}'
@@ -121,10 +132,27 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         self.format_data(pe_formatting_data, colors = ['#017112', '#05A71D', '#02E023'], column_idx=[10])
         self.display_sideframe_data()
 
+    def format_data(self, data_list, colors, column_idx=[0, 1], top_n=3):
+            # Filter out the data for the specific column
+            column_data = [data for data in data_list if data['label_idx'] == column_idx[0]]
+            
+            # Sort the data by value in descending order
+            sorted_data = sorted(column_data, key=lambda x: x['value'], reverse=True)
+            
+            # Get the top N values and their row numbers
+            top_values = sorted_data[:top_n]
+            
+            # Apply color grading to the labels
+            for idx, data in enumerate(top_values):
+                value, row_number = data['value'], data['row_number']
+                color = colors[idx] if idx < len(colors) else 'grey'  # Default color for values beyond top N
+                label = ctk.CTkLabel(self, text=value, fg_color=color)
+                label.grid(row=row_number, column=column_idx[0], sticky = 'nsew')  # Update this line if labels are stored differently
+            
     def display_sideframe_data(self):
-        ctk.CTkLabel(self.menu_frame, text='LTP').grid(row = 0, column = 0, sticky = 'nsew')
-        # quote_data = self.get_quotes()
-        # print(quote_data)
+        selected_symbol = self.controller.get_selected_symbol()
+        quote_data = self.get_quotes(selected_symbol)
+        print(quote_data)
 
     def get_quotes(self, symbol):
         indices_df = {"NIFTY": 'NIFTY 50', 'BANKNIFTY':"NIFTY BANK", 'FINNIFTY': 'NIFTY FIN SERVICE', 'MID CAP': "NIFTY MID SELECT"}
@@ -134,26 +162,6 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
             if data['indexSymbol'] ==indices_df[symbol]:
                 return data
         return f'Error! No indice with name {symbol}'
-
-    def format_data(self, data_list, colors, column_idx=[0, 1], top_n=3):
-        # Filter out the data for the specific column
-        column_data = [data for data in data_list if data['label_idx'] == column_idx[0]]
-        
-        # Sort the data by value in descending order
-        sorted_data = sorted(column_data, key=lambda x: x['value'], reverse=True)
-        
-        # Get the top N values and their row numbers
-        top_values = sorted_data[:top_n]
-        
-        # Apply color grading to the labels
-        for idx, data in enumerate(top_values):
-            value, row_number = data['value'], data['row_number']
-            color = colors[idx] if idx < len(colors) else 'grey'  # Default color for values beyond top N
-            label = ctk.CTkLabel(self, text=value, fg_color=color)
-            label.grid(row=row_number, column=column_idx[0], sticky = 'nsew')  # Update this line if labels are stored differently
-        
-        # print(top_values)
-            
 
 class Methods:
     def __init__(self):
@@ -186,6 +194,18 @@ class Methods:
         return ""
 
 
-if __name__ =="__main__":
+# Main application window
+class OptionChainWindow(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("Option Chain")
+        self.geometry("800x300")
+        self.columnconfigure((0, 1, 2, 3, 4), weight=1)
+        self.rowconfigure((0, 1, 2, 3, 4), weight=1)
+
+        self.controller = ApplicationController(self)
+        self.header = self.controller.create_header()
+
+if __name__ == "__main__":
     option_window = OptionChainWindow()
     option_window.mainloop()
