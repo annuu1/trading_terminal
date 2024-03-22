@@ -22,6 +22,9 @@ class ApplicationController:
 
     def get_selected_symbol(self):
         return self.frames['header'].indice.get()
+    
+    def get_strike_number(self):
+        return self.frames['header'].strike_number.get()
 
     def display_option_chain(self):
         option_chain_frame = self.create_option_chain_frame()
@@ -44,8 +47,12 @@ class Header(ctk.CTkFrame):
         self.expiry.grid(row=0, column=1, padx=(2, 2), pady=(2, 2))
         self.expiry.set(value=self.expiries[0])
 
+        self.strike_number = ctk.CTkComboBox(self, values=['4', '8', '10', '30', '50', 'ALL'])
+        self.strike_number.grid(row=0, column=2, padx=(2, 2), pady=(2, 2))
+        self.strike_number.set(value=['10'])
+
         self.option_chain_button = ctk.CTkButton(self, text="Show Option Chain", command=self.display_option_chain)
-        self.option_chain_button.grid(row=0, column=2, padx=(2, 2), pady=(2, 2))
+        self.option_chain_button.grid(row=0, column=3, padx=(2, 2), pady=(2, 2))
 
     def get_expiries(self):
         url = f'https://www.nseindia.com/api/option-chain-indices?symbol={self.indice.get()}'
@@ -68,11 +75,12 @@ class MenuFrame(ctk.CTkScrollableFrame):
     def __init__(self, master):
         super().__init__(master)
         # Set the width and height for the frame
-        self.width = 30        
+        self.width = 90        
         # Configure the frame's width and height
         self.configure(width=self.width)
 
         self.grid(row = 1, column = 0, sticky = 'nsew',padx = (0, 1) , pady = (1,1))
+        self.columnconfigure(0, weight=1)
 
         ctk.CTkLabel(self, text="help").grid(row = 0, column = 0)
 
@@ -116,8 +124,9 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         call_row = 0
         put_row = 0
         atm_strike = self.calculate_atm_strik(symbol)
-        strikes_number = 10
+        strikes_number = self.controller.get_strike_number()
         atm_strike_index = 0
+        # print(strikes_number)
 
         #filter the data accroding to the expiry
         raw_data = json.loads(Methods().get_data(url=url))['records']['data'] #list of the chain data
@@ -129,11 +138,15 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         for idx in range(len(data)):
             if data[idx]['strikePrice'] == atm_strike:
                 atm_strike_index = idx
-                print(atm_strike_index)
+                # print(atm_strike_index)
                 break
-
-        start_idx = int(atm_strike_index - strikes_number/2)
-        end_idx = int(atm_strike_index+1 + strikes_number/2)
+        if strikes_number =='ALL':
+            start_idx = 0
+            end_idx = int(len(data)-1)
+        else:
+            strikes_number = int(strikes_number)
+            start_idx = int(atm_strike_index - strikes_number/2)
+            end_idx = int(atm_strike_index+1 + strikes_number/2)
 
         #display the options chain
         for i in range(start_idx, end_idx):
@@ -160,17 +173,15 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
 
         self.format_data(ce_formatting_data, colors = ['#FD0707', '#FE3D3D', '#FC7543'], column_idx=[0,1])
         self.format_data(pe_formatting_data, colors = ['#017112', '#05A71D', '#02E023'], column_idx=[9,10])
-        self.display_sideframe_data()
-        self.calculate_pcr(data)
+        self.display_sideframe_data(data)
 
-    
     def calculate_atm_strik(self, symbol):
         strikes = {'BANKNIFTY' : 100, 'NIFTY' :50, 'FINNIFTY': 50, 'MIDCPNIFTY' : 25}
         strik_def =strikes[symbol]
 
         last_price = self.get_quotes(symbol=symbol).get('last')
         val1 = math.floor(last_price / strik_def) * strik_def
-        print(math.floor(last_price / strik_def))
+        # print(math.floor(last_price / strik_def))
         val2 = math.ceil(last_price / strik_def) * strik_def
         return val1 if abs(last_price - val1) < abs(last_price - val2) else val2
 
@@ -185,8 +196,7 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         # print(f'call OI {call_oi}, put OI {put_oi}')    
         # print(f'PCR {put_oi/call_oi}') 
         pcr= round(put_oi/call_oi, 3)   
-        ctk.CTkLabel(self.menu_frame, text="All Strikes PCR").grid(row= 2, column = 0, sticky = "nsew")
-        ctk.CTkLabel(self.menu_frame, text=pcr).grid(row= 3, column = 0, sticky = "nsew")
+        return {'pcr':pcr, 'call_oi' : call_oi, 'put_oi' : put_oi}
 
     def format_data(self, data_list, colors, column_idx=[0, 1], top_n=3):
             i = 0
@@ -207,19 +217,31 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
                     label = ctk.CTkLabel(self, text=value, fg_color=color)
                     label.grid(row=row_number, column=column_idx[i], sticky = 'nsew')  # Update this line if labels are stored differently
                 
-    def display_sideframe_data(self):
+    def display_sideframe_data(self, data):
         selected_symbol = self.controller.get_selected_symbol()
         quote_data = self.get_quotes(selected_symbol)
         ltp = quote_data.get('last')
         ctk.CTkLabel(self.menu_frame, text=selected_symbol).grid(row = 0, column = 0)
         ctk.CTkLabel(self.menu_frame, text=ltp).grid(row = 1, column = 0)
 
+        oi_data = self.calculate_pcr(data)
+        pcr = oi_data.get('pcr')
+
+        if pcr > 1.03:
+            color = "#4BAB06"
+        elif pcr < 0.97:
+            color = "#E90A0A"
+        else:
+            color = "#DAC626"
+        ctk.CTkLabel(self.menu_frame, text="All Strikes PCR").grid(row= 2, column = 0, sticky = "nsew")
+        ctk.CTkLabel(self.menu_frame, text=pcr, fg_color= color).grid(row= 3, column = 0, sticky = "nsew")
+
     def get_quotes(self, symbol):
         indices_df = {"NIFTY": 'NIFTY 50', 'BANKNIFTY':"NIFTY BANK", 'FINNIFTY': 'NIFTY FIN SERVICE', 'MIDCPNIFTY': "NIFTY MID SELECT"}
         url_indices = "https://www.nseindia.com/api/allIndices"
         indices_data = json.loads(Methods().get_data(url=url_indices)) #indices data
         for data in indices_data['data']:
-            print(data)
+            # print(data)
             if data['indexSymbol'] ==indices_df[symbol]:
                 return data
         return f'Error! No indice with name {symbol}'
@@ -261,7 +283,8 @@ class OptionChainWindow(ctk.CTk):
         super().__init__()
         self.title("Option Chain")
         self.geometry("800x300")
-        self.columnconfigure((0, 1, 2, 3, 4), weight=1)
+        self.columnconfigure(0, weight=0)
+        self.columnconfigure((1, 2, 3, 4), weight=1)
         self.rowconfigure((0, 1, 2, 3, 4), weight=1)
 
         self.controller = ApplicationController(self)
