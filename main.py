@@ -9,8 +9,9 @@ class FinancialAnalyzer(ctk.CTk):
         self.title("Financial Analyzer")
         self.geometry("800x600")
 
-        # List to hold all condition blocks
+        # List to hold all condition blocks and connectors
         self.condition_blocks = []
+        self.condition_connectors = []
 
         # Button to add a new condition block
         self.add_condition_button = ctk.CTkButton(self, text="Add Condition", command=self.add_condition_block)
@@ -55,16 +56,23 @@ class FinancialAnalyzer(ctk.CTk):
         # Add the condition block to the list
         self.condition_blocks.append((indicator1_dropdown, params1_entry, operator_dropdown, indicator2_dropdown, params2_entry))
 
+        # If this is not the first condition, add a connector dropdown
+        if len(self.condition_blocks) > 0:
+            connector_dropdown = ctk.CTkComboBox(self, values=["","AND", "OR"])
+            connector_dropdown.pack(pady=5)
+            self.condition_connectors.append(connector_dropdown)
+
     def calculate(self):
+        print(self.condition_blocks)
         # Placeholder for the overall result
-        overall_result = True
+        overall_result = None
 
         # Fetch data from yfinance
         ticker = 'AAPL'  # Placeholder for the ticker symbol
-        data = yf.download(ticker, period='1mo')
+        data = yf.download(ticker, period='7d')
 
         # Iterate over each condition block and evaluate
-        for block in self.condition_blocks:
+        for i, block in enumerate(self.condition_blocks):
             indicator1, params1, operator, indicator2, params2 = block
 
             # Calculate the first indicator
@@ -79,11 +87,18 @@ class FinancialAnalyzer(ctk.CTk):
             # Evaluate the condition for the current block
             result = self.evaluate_condition(indicator1_data, operator.get(), indicator2_data)
 
-            # Combine the result with the overall result using logical AND
-            overall_result = overall_result and result
+            # Combine the result with the overall result using the selected connector
+            if overall_result is None:
+                overall_result = result
+            else:
+                connector = self.condition_connectors[i-1].get()
+                if connector == "AND":
+                    overall_result = overall_result and result
+                elif connector == "OR":
+                    overall_result = overall_result or result
 
         # Display the overall result
-        self.result_label.set_text(f"Overall Result: {overall_result}")
+        self.result_label.configure(text = f"Overall Result: {overall_result}")
 
     def calculate_indicator(self, data, indicator, params):
         # Placeholder function to calculate indicators
