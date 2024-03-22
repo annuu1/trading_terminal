@@ -53,8 +53,6 @@ class Header(ctk.CTkFrame):
     def display_option_chain(self):
         self.controller.display_option_chain()
 
-
-
 class MenuFrame(ctk.CTkScrollableFrame):
     def __init__(self, master):
         super().__init__(master)
@@ -97,19 +95,38 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         for idx in range(middle_index + 1, len(headers_list)):
             ctk.CTkLabel(self, text=headers_list[idx], fg_color="Red").grid(row=0, column=idx, sticky = 'nsew')
 
-
     def display_chain(self, symbol, expiry):
         url = f'https://www.nseindia.com/api/option-chain-indices?symbol={symbol}'
 
         labels = ['openInterest', 'changeinOpenInterest', 'impliedVolatility', 'lastPrice', 'change']
+        data = []
         ce_formatting_data = []
         pe_formatting_data = []
         call_row = 0
         put_row = 0
+        atm_strike = 22100
+        strikes_number = 20
+        atm_strike_index = None
 
-        data = json.loads(Methods().get_data(url=url))['records']['data'] #list of the chain data
-        for i in range(len(data)):
-            if data[i].get('expiryDate') == expiry:
+        #filter the data accroding to the expiry
+        raw_data = json.loads(Methods().get_data(url=url))['records']['data'] #list of the chain data
+        for i in range(len(raw_data)):
+            if raw_data[i].get('expiryDate') == expiry:
+                data.append(raw_data[i])
+
+        #get index of the atm strike price
+        for idx in range(len(data)):
+            if data[idx]['strikePrice'] == atm_strike:
+                atm_strike_index = idx
+                print(atm_strike_index)
+                break
+
+        start_idx = int(atm_strike_index - strikes_number/2)
+        end_idx = int(atm_strike_index+1 + strikes_number/2)
+
+        #display the options chain
+        for i in range(start_idx, end_idx):
+            if data[i].get('expiryDate') == expiry:            
                 call_row += 1
                 put_row += 1
 
