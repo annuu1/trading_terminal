@@ -236,6 +236,18 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         ctk.CTkLabel(self.menu_frame, text="All Strikes PCR").grid(row= 2, column = 0, sticky = "nsew")
         ctk.CTkLabel(self.menu_frame, text=pcr, fg_color= color).grid(row= 3, column = 0, sticky = "nsew")
 
+        oi_data = self.calculate_pcr(data, 'changeinOpenInterest')
+        pcr = oi_data.get('pcr')
+
+        if pcr > 1.03:
+            color = "#4BAB06"
+        elif pcr < 0.97:
+            color = "#E90A0A"
+        else:
+            color = "#DAC626"
+        ctk.CTkLabel(self.menu_frame, text="Change in PCR").grid(row= 4, column = 0, sticky = "nsew")
+        ctk.CTkLabel(self.menu_frame, text=pcr, fg_color= color).grid(row= 5, column = 0, sticky = "nsew")
+
     def get_quotes(self, symbol):
         indices_df = {"NIFTY": 'NIFTY 50', 'BANKNIFTY':"NIFTY BANK", 'FINNIFTY': 'NIFTY FIN SERVICE', 'MIDCPNIFTY': "NIFTY MID SELECT"}
         url_indices = "https://www.nseindia.com/api/allIndices"
