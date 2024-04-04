@@ -236,8 +236,8 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
         ctk.CTkLabel(self.menu_frame, text="All Strikes PCR").grid(row= 2, column = 0, sticky = "nsew")
         ctk.CTkLabel(self.menu_frame, text=pcr, fg_color= color).grid(row= 3, column = 0, sticky = "nsew")
 
-        oi_data = self.calculate_pcr(data, 'changeinOpenInterest')
-        pcr = oi_data.get('pcr')
+        c_oi_data = self.calculate_pcr(data, 'changeinOpenInterest')
+        pcr = c_oi_data.get('pcr')
 
         if pcr > 1.03:
             color = "#4BAB06"
@@ -247,6 +247,16 @@ class OptionChainFrame(ctk.CTkScrollableFrame):
             color = "#DAC626"
         ctk.CTkLabel(self.menu_frame, text="Change in PCR").grid(row= 4, column = 0, sticky = "nsew")
         ctk.CTkLabel(self.menu_frame, text=pcr, fg_color= color).grid(row= 5, column = 0, sticky = "nsew")
+
+        call_oi = oi_data.get('call_oi')
+
+        ctk.CTkLabel(self.menu_frame, text="Total Call OI" , fg_color='#FDB2B2', text_color='black').grid(row= 6, column = 0, sticky = "nsew")
+        ctk.CTkLabel(self.menu_frame, text=call_oi, fg_color= '#FDB2B2', text_color='black').grid(row= 7, column = 0, sticky = "nsew")
+
+        put_oi = oi_data.get('put_oi')
+
+        ctk.CTkLabel(self.menu_frame, text="Total put OI", fg_color='#D2FDB2', text_color='black').grid(row= 8, column = 0, sticky = "nsew")
+        ctk.CTkLabel(self.menu_frame, text=put_oi, fg_color= '#D2FDB2', text_color='black').grid(row= 9, column = 0, sticky = "nsew")
 
     def get_quotes(self, symbol):
         indices_df = {"NIFTY": 'NIFTY 50', 'BANKNIFTY':"NIFTY BANK", 'FINNIFTY': 'NIFTY FIN SERVICE', 'MIDCPNIFTY': "NIFTY MID SELECT"}
